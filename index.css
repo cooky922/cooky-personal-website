@@ -160,6 +160,14 @@ div.light-generic-container h1 {
 	border-bottom: 5px solid var(--color-black);
 }
 
+div.light-generic-container a {
+	text-decoration: none;
+	color: var(--secondary-color);
+	font-weight: bold;
+	text-align: center;
+	/* background-color: var(--color-black); */
+}
+
 /* Grid Main */
 .grid-container {
 	display: grid;
@@ -189,6 +197,21 @@ div.light-generic-container h1 {
 
 .cooky_article { grid-area: 1 / 2 / 4 / 4; }
 .cooky_nav { grid-area: 2 / 1 / 4 / 2; }
+
+.cooky_subnav {
+	/* TBA */ 
+	border: 5px solid var(--color-black);
+	background-color: var(--color-black);
+	border-radius: 5px;
+	padding: 5px 5px 5px 5px;
+	margin-bottom: 30px;
+	/* align-items: center; */
+	overflow: hidden;
+	box-shadow: 0 10px 0 rgba(200, 200, 200, 0.8), 
+				0 20px 0 rgba(200, 200, 200, 0.6),
+				0 30px 0 rgba(200, 200, 200, 0.3);
+	transition: 0.3s;
+}
 
 
 /* Google Icons */
