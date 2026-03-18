@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC186 – HCI Interactive Quiz</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; }
+
+  /* Header */
+  .hdr { background: #2d2b5e; color: #fff; padding: 2rem 1.5rem 1.5rem; text-align: center; }
+  .hdr h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
+  .hdr p { margin-top: .4rem; font-size: .9rem; opacity: .75; }
+
+  /* Progress bar */
+  .prog-wrap { background: #1e1c45; padding: .75rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+  .prog-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.15); border-radius: 99px; overflow: hidden; }
+  .prog-bar-fill { height: 100%; background: #7dd3b0; border-radius: 99px; transition: width .4s ease; }
+  .prog-txt { color: #fff; font-size: .8rem; white-space: nowrap; opacity: .8; }
+
+  /* Score badge */
+  .score-badge { background: rgba(255,255,255,.12); color: #fff; font-size: .8rem; padding: .25rem .75rem; border-radius: 99px; white-space: nowrap; }
+
+  /* Main area */
+  .main { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+  /* Card */
+  .card { background: #fff; border-radius: 16px; padding: 1.75rem 2rem; border: 0.5px solid #dedad2; }
+
+  /* Topic tag */
+  .topic-tag { display: inline-block; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: .2rem .6rem; border-radius: 4px; margin-bottom: 1rem; background: #eeedfe; color: #3c3489; }
+  .topic-tag.t2 { background: #e1f5ee; color: #085041; }
+  .topic-tag.t3 { background: #faeeda; color: #633806; }
+
+  /* Question */
+  .q-num { font-size: .8rem; color: #888; margin-bottom: .4rem; }
+  .q-text { font-size: 1.05rem; font-weight: 500; line-height: 1.5; margin-bottom: 1.25rem; }
+
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: .5rem; }
+  .opt { display: flex; align-items: flex-start; gap: .75rem; padding: .75rem 1rem; border-radius: 10px; border: 1.5px solid #e5e2da; cursor: pointer; transition: all .15s; font-size: .95rem; line-height: 1.4; user-select: none; }
+  .opt:hover:not(.disabled) { border-color: #7f77dd; background: #f8f7fe; }
+  .opt .letter { font-weight: 600; font-size: .8rem; color: #888; min-width: 18px; margin-top: 1px; }
+  .opt.correct { border-color: #1d9e75; background: #e1f5ee; }
+  .opt.correct .letter { color: #0f6e56; }
+  .opt.wrong { border-color: #e24b4a; background: #fcebeb; }
+  .opt.wrong .letter { color: #a32d2d; }
+  .opt.disabled { cursor: default; }
+
+  /* Feedback */
+  .feedback { margin-top: 1rem; padding: .75rem 1rem; border-radius: 8px; font-size: .9rem; line-height: 1.5; display: none; }
+  .feedback.show { display: block; }
+  .feedback.ok { background: #e1f5ee; color: #085041; border-left: 3px solid #1d9e75; }
+  .feedback.bad { background: #fcebeb; color: #501313; border-left: 3px solid #e24b4a; }
+
+  /* Buttons */
+  .btn-row { margin-top: 1.5rem; display: flex; gap: .75rem; flex-wrap: wrap; }
+  .btn { padding: .55rem 1.25rem; border-radius: 8px; font-size: .9rem; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: all .15s; }
+  .btn-next { background: #2d2b5e; color: #fff; border-color: #2d2b5e; display: none; }
+  .btn-next:hover { background: #1e1c45; }
+  .btn-next.show { display: inline-flex; }
+  .btn-restart { background: #fff; color: #2d2b5e; border-color: #2d2b5e; }
+  .btn-restart:hover { background: #f0eff8; }
+
+  /* Results screen */
+  .results { display: none; text-align: center; }
+  .results.show { display: block; }
+  .results-score { font-size: 4rem; font-weight: 700; color: #2d2b5e; margin: 1.5rem 0 .5rem; }
+  .results-label { font-size: 1rem; color: #555; margin-bottom: 2rem; }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+  .res-card { background: #f5f4f0; border-radius: 10px; padding: 1rem; }
+  .res-card .val { font-size: 1.6rem; font-weight: 600; color: #2d2b5e; }
+  .res-card .lbl { font-size: .75rem; color: #888; margin-top: .25rem; }
+
+  /* Review table */
+  .review { margin-top: 1.5rem; text-align: left; }
+  .review h3 { font-size: 1rem; font-weight: 600; margin-bottom: .75rem; color: #2d2b5e; }
+  .rev-item { display: flex; align-items: baseline; gap: .5rem; padding: .4rem 0; border-bottom: 0.5px solid #e5e2da; font-size: .85rem; }
+  .rev-item .ri { min-width: 28px; font-weight: 600; color: #888; }
+  .rev-item .rs { font-size: 1rem; }
+  .rs.ok { color: #1d9e75; }
+  .rs.bad { color: #e24b4a; }
+  .rev-q { flex: 1; line-height: 1.4; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .fb { font-size: .78rem; padding: .3rem .7rem; border-radius: 6px; border: 1px solid #dedad2; background: #fff; cursor: pointer; transition: all .15s; }
+  .fb.active { background: #2d2b5e; color: #fff; border-color: #2d2b5e; }
+
+  @media(max-width:600px){ .card{ padding: 1.25rem 1rem; } }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>CSC186 — Human-Computer Interaction</h1>
+  <p>First Exam Review · Topics 1, 2 &amp; 3</p>
+</div>
+
+<div class="prog-wrap">
+  <div class="prog-bar-bg"><div class="prog-bar-fill" id="progFill" style="width:0%"></div></div>
+  <span class="prog-txt" id="progTxt">0 / 120</span>
+  <span class="score-badge" id="scoreBadge">Score: 0</span>
+</div>
+
+<div class="main">
+  <div id="quizArea">
+    <div class="filter-bar" id="filterBar">
+      <span style="font-size:.78rem;color:#888;align-self:center;">Filter:</span>
+      <button class="fb active" data-f="all" onclick="setFilter('all',this)">All Topics</button>
+      <button class="fb" data-f="1" onclick="setFilter('1',this)">Topic 1: Intro to HCI</button>
+      <button class="fb" data-f="2" onclick="setFilter('2',this)">Topic 2: PACT</button>
+      <button class="fb" data-f="3" onclick="setFilter('3',this)">Topic 3: Understanding Users</button>
+    </div>
+
+    <div class="card" id="qCard">
+      <div class="topic-tag" id="topicTag">Topic 1</div>
+      <div class="q-num" id="qNum">Question 1 of 120</div>
+      <div class="q-text" id="qText"></div>
+      <div class="options" id="opts"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="btn-row">
+        <button class="btn btn-next" id="btnNext" onclick="nextQ()">Next question →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="results card" id="results">
+    <div style="font-size:2rem;">🎓</div>
+    <div class="results-score" id="rScore"></div>
+    <div class="results-label" id="rLabel"></div>
+    <div class="results-grid">
+      <div class="res-card"><div class="val" id="rCorrect"></div><div class="lbl">Correct</div></div>
+      <div class="res-card"><div class="val" id="rWrong"></div><div class="lbl">Incorrect</div></div>
+      <div class="res-card"><div class="val" id="rPct"></div><div class="lbl">Accuracy</div></div>
+    </div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-restart" onclick="restart()">Restart Quiz</button>
+      <button class="btn btn-restart" onclick="restartWrong()">Retry Wrong Answers</button>
+    </div>
+    <div class="review" id="reviewList"></div>
+  </div>
+</div>
+
+<script>
+const ALL_Q = [
+/* ===== TOPIC 1: INTRO TO HCI ===== */
+{t:1,q:"What is the primary goal of an Interactive Systems Designer?",a:["To maximize hardware performance","To design interactive systems that are usable, accessible, and engaging","To create complex algorithms","To optimize database queries"],c:1},
+{t:1,q:"Which acronym summarizes the three goals of interactive systems?",a:["PAC","UAE","HCI","UXD"],c:1},
+{t:1,q:"The human-centred approach to design means putting _______ at the centre of the design process.",a:["technology","data","people","profit"],c:2},
+{t:1,q:"Which of the following is NOT listed as a goal of interactive systems?",a:["Usable","Accessible","Profitable","Engaging"],c:2},
+{t:1,q:"Users can interact with a user interface in which three ways?",a:["Verbally, Visually, Mentally","Physically, Perceptually, Conceptually","Tactually, Audibly, Visually","Directly, Indirectly, Remotely"],c:1},
+{t:1,q:"According to the machine-centred view, which characteristic describes people (not machines)?",a:["Precise","Logical","Emotional","Organized"],c:2},
+{t:1,q:"According to the people-centred view, machines are described as:",a:["Creative and resourceful","Dumb and rigid","Flexible and attentive","Compliant and imaginative"],c:1},
+{t:1,q:"Which of these is a characteristic of people according to the people-centred view?",a:["Constrained to make consistent decisions","Insensitive to change","Attentive to change","Unimaginative"],c:2},
+{t:1,q:"The three reasons why a human-centred approach is important are Safety, Effectiveness, and:",a:["Efficiency","Ethics","Economy","Elegance"],c:1},
+{t:1,q:"In what decade were computers first invented?",a:["1940s","1950s","1960s","1970s"],c:1},
+{t:1,q:"The first screen and mouse were developed in which decade?",a:["1950s","1960s","1970s","1980s"],c:1},
+{t:1,q:"The first internet was created in which decade?",a:["1960s","1970s","1980s","1990s"],c:1},
+{t:1,q:"The Apple Macintosh and first HCI conferences appeared in which year?",a:["1980","1982","1984","1986"],c:2},
+{t:1,q:"Which decade saw the arrival of the World Wide Web?",a:["1980s","1990s","2000s","1970s"],c:1},
+{t:1,q:"An information appliance is best described as a device that:",a:["Runs all possible applications","Is optimized for a limited, focused set of functions","Requires expert users","Has no user interface"],c:1},
+{t:1,q:"A 'User Interface' includes all those parts of a system that:",a:["Run background processes","Users come into contact with","Manage database storage","Handle network communication"],c:1},
+{t:1,q:"Perceptual interaction with a device involves:",a:["Pressing buttons and levers","Seeing and hearing displays and outputs","Understanding what the device does","Sending commands via keyboard"],c:1},
+{t:1,q:"Conceptual interaction with a device involves:",a:["Physically pushing buttons","Seeing colours on a screen","Trying to figure out what the device does and what you should do","Listening to audio feedback"],c:2},
+{t:1,q:"Which of the following is NOT a skill area for interactive systems designers?",a:["Knowing about people","Knowing about technologies","Knowing about marketing budgets","Knowing about design"],c:2},
+{t:1,q:"'Design' in interactive systems is described as a creative process that also:",a:["Avoids iteration","Separates problem and solution clearly","Involves much iteration where both problem and solution evolve","Focuses purely on aesthetics"],c:2},
+{t:1,q:"Mitch Kapor's quote about design describes it as standing with a foot in two worlds. Those two worlds are:",a:["Art and science","Technology and the world of people and human purposes","Hardware and software","Business and engineering"],c:1},
+{t:1,q:"Which of these was listed as an example of an interactive system concerned with helping people cooperate and create communities?",a:["iPod","AIBO","OSX","Second Life"],c:3},
+{t:1,q:"The Sony AIBO robot is an example of an interactive system primarily designed for:",a:["Military use","Music playback","Companionship","Business data processing"],c:2},
+{t:1,q:"Designing interactive systems is described as being more than just designing the user interface—it is about designing:",a:["Only input and output","The whole human-computer and human-human interaction","Only the visual aesthetic","Only the software backend"],c:1},
+{t:1,q:"Which academic discipline contributes to the 'People' component of interactive systems design?",a:["Electronic engineering","Soft systems","Psychology","Product design"],c:2},
+{t:1,q:"'Safety' as a reason for human-centred design is linked to which insight?",a:["Users pay more for safe products","Human error is often the fault of bad design","Safety only matters in medical systems","Machines are inherently dangerous"],c:1},
+{t:1,q:"Which of the following is listed as an activity input concern in the user interface?",a:["Storing data","Entering commands and navigating the system","Displaying content to the user","Processing in the background"],c:1},
+{t:1,q:"Which of the following belongs to the 'output' concern of a user interface?",a:["Entering data into the system","Navigating through commands","Displaying feedback and content to the user","Running background services"],c:2},
+{t:1,q:"According to the course, in the age of e-commerce, customers evaluate usability:",a:["After purchase, at home","Only through product reviews","First, before making a purchase","By reading the manual"],c:2},
+{t:1,q:"Interactive systems are described as components, devices, and software concerned with:",a:["Manufacturing physical goods","Processing and displaying information that people can interact with","Running scientific simulations only","Replacing human workers"],c:1},
+
+/* ===== TOPIC 2: PACT ===== */
+{t:2,q:"What does the acronym PACT stand for?",a:["People, Activities, Contexts, Technologies","Plan, Analyse, Create, Test","Process, Architecture, Content, Tasks","People, Analysis, Choices, Techniques"],c:0},
+{t:2,q:"Which of the following is NOT one of the four PACT elements?",a:["People","Activities","Contexts","Processes"],c:3},
+{t:2,q:"The three types of people differences in PACT are Physical, Psychological, and:",a:["Cultural","Usage","Emotional","Educational"],c:1},
+{t:2,q:"Mental models are also known as:",a:["System models","Conceptual models","Interface models","Process models"],c:1},
+{t:2,q:"Which of the following is a temporal aspect of activities?",a:["Whether the activity involves cooperation","Whether the activity is safety-critical","How regular or infrequent the activity is","What data formats are required"],c:2},
+{t:2,q:"A response time over how many seconds will quickly frustrate users?",a:["1 second","3 seconds","5 seconds","10 seconds"],c:2},
+{t:2,q:"The three types of contexts in PACT are Physical, Social, and:",a:["Digital","Organizational","Temporal","Cultural"],c:1},
+{t:2,q:"The four elements of Technologies in PACT are Input, Output, Communication, and:",a:["Control","Content","Configuration","Code"],c:1},
+{t:2,q:"A Persona in PACT analysis is best described as:",a:["A technical specification document","A profile of an archetypical person in the domain","A list of system requirements","A flowchart of user interactions"],c:1},
+{t:2,q:"A concrete scenario differs from a conceptual scenario in that it:",a:["Describes activities in abstract terms","Covers broad types of users","Specifies particular design details (e.g. 'Pete clicks the log on icon')","Ignores the technology used"],c:2},
+{t:2,q:"According to the slides, a conceptual scenario might say 'Pete logs onto the computer.' The concrete equivalent would be:",a:["'Pete accesses the system'","'Pete clicks on the log on icon'","'Pete uses some authentication method'","'Pete begins a session'"],c:1},
+{t:2,q:"Which of the following best describes the 'System Image' in mental model theory?",a:["The designer's internal vision of the system","What the user actually interacts with—interface, docs, and system behaviour","The background database structure","The marketing brochure for the system"],c:1},
+{t:2,q:"Psychological differences between users include differences in perception, memory, and:",a:["Height and weight","Mental models of things","Network connectivity","Keyboard layouts"],c:1},
+{t:2,q:"Which statement about mental models is TRUE?",a:["Mental models are perfect and complete representations","Mental models are incomplete but can be 'run' for reasoning","Mental models only apply to expert users","Mental models cannot change over time"],c:1},
+{t:2,q:"When the designers' mental model and users' mental model do NOT align, the result is:",a:["Better system performance","Improved usability","Confusion, errors, and frustration","More creative use of the system"],c:2},
+{t:2,q:"Which temporal response time is recommended for a hand-eye coordination activity?",a:["1 second","100 milliseconds","500 milliseconds","5 seconds"],c:1},
+{t:2,q:"Which temporal response time is recommended for a cause-effect activity?",a:["100 ms","5 seconds","1 second","10 seconds"],c:2},
+{t:2,q:"In a PACT analysis, 'Co-operation and Complexity' is a characteristic of which element?",a:["People","Technologies","Contexts","Activities"],c:3},
+{t:2,q:"Which of the following is an example of a physical context of use?",a:["Help available from colleagues","Power hierarchy in an organisation","An ATM machine vs. a computer at home","The social acceptability of a design"],c:2},
+{t:2,q:"Scenarios in PACT are defined as:",a:["Technical architecture documents","Stories about people undertaking activities using technologies in contexts","Lists of system requirements","Formal user interface specifications"],c:1},
+{t:2,q:"A concrete persona differs from a conceptual persona in that it has:",a:["Only abstract role descriptions","Hard characteristics such as age, interests, and a name","No goals defined","Only technical requirements"],c:1},
+{t:2,q:"Activities and technologies share which kind of relationship?",a:["Technologies determine activities absolutely","Activities have no effect on technology design","Activities set requirements for technologies; technologies change how activities are done","They are completely independent"],c:2},
+{t:2,q:"'Streamy' media vs 'chunky' media relates to which technology element?",a:["Input","Output characteristics","Communication","Content type"],c:1},
+{t:2,q:"How does watching a film illustrate the PACT framework?",a:["It only relates to 'People'","The activity stayed the same while technologies changed from cinema to streaming","Technology never changed the activity","Film watching is purely a social context"],c:1},
+{t:2,q:"In a PACT analysis, brainstorming is one technique. Which of these is another listed technique?",a:["Automated code review","Database profiling","Envisioning ideas by drawing pictures and sketches","Surveying competitor products only"],c:2},
+{t:2,q:"The 'Distribution of Practice Effect' in LTM storage states that learning is optimized by:",a:["Studying all at once the night before","Spreading learning over time","Reading the same content repeatedly in one session","Using only visual materials"],c:1},
+{t:2,q:"Which of the following is an example of a safety-critical activity characteristic?",a:["Browsing the web casually","Sending an instant message","Air traffic control operations","Adjusting music volume"],c:2},
+{t:2,q:"Input technologies in PACT are concerned with:",a:["How the system displays output to users","How data and commands are entered into the system","How devices communicate with each other","What content the system manages"],c:1},
+{t:2,q:"According to PACT, 'organizational context' relates to:",a:["The physical environment around the user","Social help from colleagues","Power structures, changes in lifestyle, and de-skilling","The media formats supported"],c:2},
+{t:2,q:"Why is mental model design important for usability?",a:["It makes the code run faster","If the system image clearly communicates how the system works, users develop accurate mental models","It reduces the need for documentation","It makes the hardware cheaper"],c:1},
+
+/* ===== TOPIC 3: UNDERSTANDING USERS ===== */
+{t:3,q:"What is the formula for Fitts' Law?",a:["Mt = a × b × D/S","Mt = a + b log₂(D/S + 1)","Mt = D/(S × b)","Mt = a log₂(S/D)"],c:1},
+{t:3,q:"In Fitts' Law, 'Mt' stands for:",a:["Maximum throughput","Movement time","Motor task","Memory time"],c:1},
+{t:3,q:"According to Fitts' Law, what two design recommendations follow?",a:["Make targets as small as possible and distances as large as possible","Make targets as large as possible and distances as small as possible","Minimize both target size and distance","Maximize both target size and distance"],c:1},
+{t:3,q:"Reaction time to a visual stimulus is approximately:",a:["150 ms","200 ms","700 ms","50 ms"],c:1},
+{t:3,q:"Reaction time to an auditory stimulus is approximately:",a:["200 ms","700 ms","150 ms","400 ms"],c:2},
+{t:3,q:"Reaction time to pain is approximately:",a:["150 ms","200 ms","700 ms","350 ms"],c:2},
+{t:3,q:"George Miller's famous theory is about the magic number:",a:["5 ± 1","7 ± 2","9 ± 3","6 ± 1"],c:1},
+{t:3,q:"George Miller's 1956 paper is about:",a:["Long-term memory capacity","How much information people can hold in immediate (short-term) memory","Reaction time to stimuli","Visual perception principles"],c:1},
+{t:3,q:"Which of the following is a CORRECT application of Miller's 7±2 theory to interface design?",a:["Always put exactly 7 items on every menu regardless of task","Display only 7 icons on a toolbar at all times","Apply it when users must recall items from memory after briefly seeing them, not when scanning a list","Never exceed 7 menu options under any circumstances"],c:2},
+{t:3,q:"Why is applying 7±2 rigidly to all menus considered WRONG?",a:["Users can scan lists visually without memorizing each item","7 is always too many items for a menu","Menus should have at least 10 items","Short-term memory capacity is actually unlimited"],c:0},
+{t:3,q:"The concept of 'chunking' in memory theory means:",a:["Breaking information into smaller random pieces","Grouping information into meaningful units to increase effective capacity","Storing information in long-term memory only","Ignoring irrelevant information"],c:1},
+{t:3,q:"Which of the following is an example of chunking?",a:["Remembering '2125685382' as 10 separate digits","Remembering '212DanHome' as 3 meaningful chunks","Remembering random strings with no grouping","Writing down every digit separately"],c:1},
+{t:3,q:"The five core cognitive aspects covered in this topic are Attention, Perception and Recognition, Memory, Reading/Speaking/Listening, and:",a:["Emotion and motivation","Problem-solving, planning, reasoning, decision-making, and learning","Social interaction","Physical movement"],c:1},
+{t:3,q:"Attention in cognitive psychology refers to:",a:["Long-term information storage","Selecting things to concentrate on from competing stimuli","Recognizing familiar patterns","Recalling memorized facts"],c:1},
+{t:3,q:"Which design implication follows from the cognitive concept of attention?",a:["Make the interface as complex as possible","Use uniform colour throughout with no contrast","Make important information salient using colour, animation, or spacing","Never use sound in interfaces"],c:2},
+{t:3,q:"'Constructivism' in perception means:",a:["Brains create pixel-by-pixel images of the world","Brains construct simplified models from sensory input, remembering only meaningful details","Users always perceive interfaces exactly as designers intended","Memory stores complete copies of everything seen"],c:1},
+{t:3,q:"Which Gestalt principle states that people perceive objects as being either in the foreground or background?",a:["Similarity","Proximity","Figure-Ground","Closure"],c:2},
+{t:3,q:"The Gestalt principle of Similarity states that:",a:["Things close together appear more related","Things within the same region appear grouped","When things appear similar, we group them and think they have the same function","Elements on a curve are perceived as more related"],c:2},
+{t:3,q:"The Gestalt principle of Proximity states that:",a:["Visually outstanding elements capture attention first","Things that are close together appear more related than things farther apart","We look for recognizable patterns in complex arrangements","Similar-looking elements share the same function"],c:1},
+{t:3,q:"The Gestalt principle of Common Region states that:",a:["Elements on a line are more related","Objects in the same closed region appear grouped together","Similar objects function the same way","The brain fills in missing parts of a shape"],c:1},
+{t:3,q:"The Gestalt principle of Continuity states that:",a:["We perceive objects as foreground or background","Elements close together appear related","Elements arranged on a line or curve are perceived as more related","Visually striking elements capture attention first"],c:2},
+{t:3,q:"The Gestalt principle of Closure states that:",a:["Elements on a curve seem related","When looking at complex visual elements, we tend to seek a single recognizable pattern","Things close together appear grouped","Similar-looking objects are assumed to share a function"],c:1},
+{t:3,q:"The Gestalt principle of Focal Point states that:",a:["Elements close together appear related","We group visually similar items","Whatever stands out visually captures and holds attention first","Complex shapes are simplified into recognizable wholes"],c:2},
+{t:3,q:"In which decade were the Gestalt principles first developed?",a:["1890s","1910s","1920s","1940s"],c:2},
+{t:3,q:"'Gestalt' is a German word meaning:",a:["Perception","Pattern","Shape","Mind"],c:2},
+{t:3,q:"The fundamental Gestalt law is that we tend to order experience in a:",a:["Random and chaotic manner","Regular, orderly, and recognizable manner","Purely emotional manner","Purely logical manner"],c:1},
+{t:3,q:"Long-term memory (LTM) storage involves which four characteristics?",a:["Speed, accuracy, capacity, durability","Rehearsal, total time hypothesis, distribution of practice, structure/meaning/familiarity","Encoding, storage, retrieval, deletion","Attention, perception, processing, output"],c:1},
+{t:3,q:"The 'Total Time Hypothesis' in LTM storage states that:",a:["All information is retained for a fixed total time","The amount of information retained is proportional to rehearsal time","Information is stored in equal chunks regardless of time","Total time has no effect on memory retention"],c:1},
+{t:3,q:"LTM forgetting via 'Decay' means:",a:["New memories replace old ones","Information is lost gradually but very slowly over time","Emotional memories are suppressed","Memory is selectively erased by the brain"],c:1},
+{t:3,q:"LTM forgetting via 'Interference' includes retroactive interference, which means:",a:["Old information interferes with new learning","New information replaces old information","Emotional states block all memory retrieval","Rehearsal is disrupted by distractions"],c:1},
+{t:3,q:"'Proactive inhibition' in LTM forgetting refers to:",a:["New information replacing old","Old information interfering with new learning","Emotional suppression of memories","The gradual decay of all memories"],c:1},
+{t:3,q:"LTM retrieval by 'Recognition' is described as:",a:["Reproducing information from memory without cues","Reconstructing past events imaginatively","Knowing that information has been seen before—less complex than recall","Using categories and imagery as cues"],c:2},
+{t:3,q:"LTM retrieval by 'Recall' is described as:",a:["Recognizing previously seen information","Reproducing information from memory, often assisted by cues like categories or imagery","Passively absorbing new information","Automatic pattern matching"],c:1},
+{t:3,q:"Which is easier for humans—recognition or recall?",a:["Recall, because it is more active","Recognition, because the information itself acts as a cue","They are equally easy","It depends entirely on the user's age"],c:1},
+{t:3,q:"The rise of the GUI over command-line interfaces reflects which memory principle?",a:["LTM decay is slower with commands","Recognition is easier than recall—GUIs let users recognize options rather than recall commands","Chunking works better with text","Short-term memory capacity increased"],c:1},
+{t:3,q:"Craik (1943) described mental models as:",a:["Emotional responses to interface design","Internal constructions of some aspect of the external world enabling predictions","Lists of rules users follow","Visual metaphors for system components"],c:1},
+{t:3,q:"'External cognition' in HCI is concerned with:",a:["How the brain processes internal thoughts","How we interact with external representations like maps, notes, and diagrams","The social context of technology use","Physical ergonomics of device use"],c:1},
+{t:3,q:"Which of the following is an example of 'externalizing to reduce memory load'?",a:["Memorizing all commands by heart","Writing a to-do list or using a calendar to remember tasks","Relying entirely on recall","Avoiding all external tools"],c:1},
+{t:3,q:"'Computational offloading' refers to:",a:["Moving computation to the cloud","Using a tool (e.g. pen and paper or calculator) to carry out a computation instead of doing it mentally","Distributing processing across multiple CPUs","Reducing the number of calculations in software"],c:1},
+{t:3,q:"What design implication does external cognition suggest?",a:["Force users to memorize system commands","Provide external representations at the interface that reduce memory load","Hide information to keep the interface minimal","Use only text-based displays"],c:1},
+{t:3,q:"The first of the four psychological principles states that users see:",a:["Only what is shown to them","What they expect to see","Random elements first","The most colourful element first"],c:1},
+{t:3,q:"The second psychological principle states that users have difficulty focusing on more than one activity at a time. Which design implication follows?",a:["Always show multiple tasks simultaneously","Group things that belong together; give prominence to important items","Use animation for all interface elements","Never use colour coding"],c:1},
+{t:3,q:"The third psychological principle (structured layouts) is explained using which set of laws?",a:["Fitts' Laws","Hick's Laws","Gestalt Laws of Visual Perception","Miller's Laws"],c:2},
+{t:3,q:"The fourth psychological principle ('easier to recognize than recall') leads to which design advice?",a:["Use command-line interfaces where possible","Put knowledge users need in the world (the interface) rather than forcing reliance on memory","Require users to memorize all keyboard shortcuts","Avoid menus and use only text input"],c:1},
+{t:3,q:"Individual differences that are 'long-term' include:",a:["Effects of stress or fatigue","Short spikes in attention","Sex, physical, and intellectual abilities","Current mood"],c:2},
+{t:3,q:"Individual differences that are 'changing' over time include:",a:["Sex","Short-term stress","Age","Momentary fatigue"],c:2},
+{t:3,q:"The 'General valve theory' explains why people incorrectly apply the 'more is more' principle to:",a:["File management","Thermostat-controlled devices","Gestalt perception","Chunking information"],c:1},
+{t:3,q:"According to the course material, people often have erroneous mental models of thermostats because they apply a model based on:",a:["Digital logic","An on-off switch model","Fitts' Law","The 7±2 rule"],c:1},
+{t:3,q:"Norman (1983) observed that people's mental models of computers and interactive devices are often:",a:["Accurate and complete","Poor, incomplete, easily confusable, based on inappropriate analogies","Well-structured and logical","Derived from formal training"],c:1},
+{t:3,q:"A design principle derived from mental model research is to make systems:",a:["As complex as possible","Transparent so people can understand them better","Command-line only","Opaque to prevent misuse"],c:1},
+{t:3,q:"Which of the following is an interface design technique specifically mentioned for making important information stand out?",a:["Using monochrome colour schemes","Using colour, ordering, spacing, underlining, sequencing, and animation","Using only text with no graphical elements","Hiding options in sub-menus"],c:1},
+{t:3,q:"The icon being easier to use than a text command name exemplifies which cognitive principle?",a:["Constructivism","Recognition over recall","Chunking","Attention capture"],c:1},
+{t:3,q:"'Information at the interface should be structured to capture users' attention' is a design implication of which cognitive concept?",a:["Memory","Perception","Attention","Reading"],c:2},
+{t:3,q:"Context plays a major role in what people perceive. Which concept describes factors we know and bring to a situation?",a:["Long-term memory","Mind set","External cognition","Focal point"],c:1},
+{t:3,q:"Perception and recognition in HCI is about how information is acquired from the world and:",a:["Stored permanently in LTM","Transformed into experiences","Discarded if not relevant","Shared with other users"],c:1},
+{t:3,q:"The design implication of perception and recognition is to create representations that are:",a:["Complex and rich","Readily perceivable—legible text, clear distinguishable icons","Hidden until needed","Randomly placed"],c:1},
+{t:3,q:"'File management and retrieval is a real problem for most users' is an example illustrating the design application of:",a:["Gestalt principles","The 7±2 rule and memory research","Fitts' Law","Reaction time research"],c:1},
+{t:3,q:"Which memory process helps move information from short-term memory to long-term memory?",a:["Decay","Interference","Rehearsal","Recognition"],c:2},
+{t:3,q:"The course mentions humans are described as 'visual beings.' Which sense is noted as primary?",a:["Hearing","Touch","Sight","Smell"],c:2},
+{t:3,q:"Which of the following best describes 'deep versus shallow' mental models as mentioned by Craik?",a:["Deep models are about emotions; shallow models are about logic","Deep models include full understanding of how something works; shallow models cover only how to use it","Shallow models are more accurate than deep models","Deep models are only accessible to experts"],c:1},
+
+/* ----- Additional cross-topic and applied questions ----- */
+{t:1,q:"Which of the following is listed as an information appliance characteristic?",a:["Performs unlimited diverse functions","Has a clear focused function and direct physical user interface","Requires expert-level users to operate","Designed primarily for data processing"],c:1},
+{t:2,q:"In a PACT analysis, 'data requirements' and 'media requirements' are characteristics of which element?",a:["People","Contexts","Activities","Technologies"],c:2},
+{t:2,q:"What type of PACT analysis activity involves getting together as a group and talking through ideas without dismissing any initially?",a:["Interviews","Observations","Brainstorming","Structured walkthroughs"],c:2},
+{t:3,q:"According to the Google example mentioned in the course, good attention design means:",a:["Cluttering the interface with many eye-catching elements","Keeping the design crisp and simple, avoiding clutter","Using as many colours as the software allows","Maximising animation on the home page"],c:1},
+{t:1,q:"Which view of people vs. machines says people are 'resourceful' while machines are 'unimaginative'?",a:["Machine-centred view","Ergonomic view","People-centred view","Systems-centred view"],c:2},
+{t:2,q:"A nurse coordinator persona named 'Rhonda Wilson' has which primary goal listed in the slides?",a:["Maximize paperwork efficiency","Spend time on patient care, not paperwork","Reduce hospital costs","Improve software systems"],c:1},
+{t:3,q:"In the thermostat mental model example, Kempton (1996) found that many people believe turning the thermostat to the maximum will:",a:["Have no effect on warming speed","Warm the room faster than setting it to the desired temperature","Cool the room down","Cause damage to the system"],c:1},
+{t:1,q:"Interactive systems are said to increasingly include which types of everyday objects beyond computers and phones?",a:["Aircraft and ships","Clothes, jewellery, and buildings","Satellites and spacecraft","Only touchscreen devices"],c:1},
+{t:2,q:"When a system's image does NOT clearly communicate how it functions, users will:",a:["Ask the designer for help","Develop incorrect mental models leading to confusion","Ignore the interface entirely","Always find the correct workaround"],c:1},
+{t:3,q:"The ability to 'run' a mental model refers to using it to:",a:["Execute software code","Reason through a problem or remember things (e.g. counting windows in your house mentally)","Download new information from the internet","Train other users"],c:1},
+{t:1,q:"According to the course, which of the following best describes the 'Ethics' reason for human-centred design?",a:["Systems should be patented","Designers must consider the effect their designs have on people's lives","Users should pay more for ethical products","Only government systems require ethical review"],c:1},
+{t:2,q:"Which of the following is a key output technology characteristic mentioned in PACT?",a:["How commands are entered","The characteristics of displays and importance of feedback","The bandwidth between devices","The organizational power structure"],c:1},
+{t:3,q:"Which of these is the most appropriate use of external representations at the interface?",a:["Forcing users to remember all information in their heads","Using colour, flagging, images, and timestamps to help users encode and retrieve files","Removing all visual cues to simplify the interface","Replacing all text with icons only"],c:1},
+{t:1,q:"The discipline of 'Sociology' contributes to which PACT skill area of the interactive systems designer?",a:["Technologies","Design","Activities and Contexts","People"],c:3},
+{t:2,q:"A conceptual persona is described as a(n):",a:["Fictional character with no basis in real users","Abstract type (e.g. student, lecturer) synthesized from real domain knowledge","Detailed profile with a name, age, and specific interests","Technical system requirement document"],c:1},
+{t:3,q:"The design recommendation 'avoid cluttering the interface' derives from research on which cognitive aspect?",a:["Long-term memory","Attention","Problem-solving","Language processing"],c:1},
+{t:1,q:"In the 1980s, which development significantly changed personal computing and helped bring HCI into focus?",a:["Creation of the internet","Arrival of the microchip and micro-computers","Development of the first mouse","First AI programs"],c:1},
+{t:3,q:"Which of the following is an example of using recognition rather than recall in interface design?",a:["Requiring users to type exact command names","Showing a menu list of options users can select from","Asking users to remember keyboard shortcuts","Providing only a blank text entry field"],c:1},
+{t:2,q:"Developing concrete scenarios during PACT analysis is most useful for:",a:["Abstract discussions about users","Specifying particular design details for a specific technology","Identifying high-level user goals only","Replacing the need for brainstorming"],c:1},
+{t:3,q:"'Rehearsal' as an LTM storage mechanism means:",a:["Distributing study time over many sessions","Repeatedly exposing information to move it from STM to LTM","Recognising previously seen information","Using external tools to offload memory"],c:1},
+{t:1,q:"Human-centred design involves four aspects. 'Thinking about what people want to do rather than what technology can do' is one. Another is:",a:["Optimising hardware performance","Designing new ways to connect people with each other","Increasing the number of features","Removing all user choice"],c:1},
+{t:3,q:"Short-term individual differences that affect interaction include:",a:["Sex and physical ability","Age-related changes","Effects of stress or fatigue at a point in time","Long-term intellectual skills"],c:2},
+{t:2,q:"Activities are described as 'clearly defined or vague.' Browsing the web is an example of which?",a:["Clearly defined","Safety-critical","Vague","Temporal"],c:2},
+{t:3,q:"According to the course, why can't users recall exactly how many links are in Amazon's top menu or what colours are on their favourite cereal box?",a:["Their visual system is damaged","People filter out irrelevant details and only store what is meaningful to them","Short-term memory erases all visual input","The information is stored but inaccessible"],c:1},
+{t:1,q:"The goal 'Engaging' in interactive systems design means the system should be:",a:["Technically complex","Enjoyable and motivating for users to use","Only accessible to trained professionals","Efficient at processing data"],c:1},
+{t:2,q:"PACT analysis is described as useful for both:",a:["Programming and testing","Analysis (understanding current situations) and design (envisioning future situations)","Marketing and sales","Hardware and software engineering"],c:1},
+{t:3,q:"The fourth psychological design principle advises designers to 'put knowledge in the world.' What does this mean in practice?",a:["Write documentation about system knowledge","Display the information users need directly in the interface rather than requiring them to memorise it","Store all data in the cloud","Use external databases only"],c:1},
+{t:1,q:"Which of these best describes why early computer systems were often difficult for general users?",a:["Hardware was too slow","Designers (often programmers and young males) failed to account for the diversity and needs of actual users","Users refused to learn new technologies","Operating systems were proprietary"],c:1},
+{t:3,q:"'Distribution of Practice Effect' applied to interface training means:",a:["Training should be delivered in one intensive session","Training should be spread over time to optimize retention","Users should practice only when they encounter problems","Training materials should be distributed digitally"],c:1},
+{t:2,q:"In the context of PACT, 'social context' refers to:",a:["The physical layout of the workspace","Help from others and the social acceptability of certain designs","The organisation's power structure","Data security policies"],c:1},
+{t:3,q:"Which Gestalt principle is most directly applied when a designer groups related form fields inside a bordered box?",a:["Similarity","Focal Point","Common Region","Continuity"],c:2},
+{t:3,q:"Which Gestalt principle is most directly applied when a navigation menu places all links close together, separate from body content?",a:["Figure-Ground","Closure","Focal Point","Proximity"],c:3},
+{t:3,q:"A designer uses a bright red 'Error' button to draw immediate attention. This most directly applies which Gestalt principle?",a:["Continuity","Closure","Focal Point","Similarity"],c:2},
+{t:3,q:"When a logo is recognizable even though it is made of dots and gaps that don't form a complete outline, which Gestalt principle is at work?",a:["Proximity","Similarity","Figure-Ground","Closure"],c:3},
+{t:3,q:"The 'interference' type of LTM forgetting where old memories interfere with new learning is called:",a:["Retroactive interference","Proactive inhibition","Decay","Chunking failure"],c:1},
+{t:3,q:"Which statement about individual differences and design is mentioned in the course?",a:["Design should target only expert users","Designers should ask whether a design decision will exclude a section of the user population","Individual differences are irrelevant to interface design","All users have identical cognitive capabilities"],c:1},
+{t:2,q:"When designing a ticket machine, considering whether the buying process is interruptible is a concern of which activity characteristic?",a:["Safety-critical aspects","Co-operative nature","Temporal aspects","Media requirements"],c:2},
+{t:1,q:"The course states that 'Designing Interactive Systems needs to be human-centred to ensure' what three qualities?",a:["Fast, cheap, and scalable systems","Safe, effective, and ethical systems","Usable, beautiful, and profitable systems","Simple, powerful, and networked systems"],c:1},
+];
+
+let pool = [...ALL_Q];
+let order = [];
+let cur = 0;
+let score = 0;
+let answered = [];
+let answered_correct = [];
+let activeFilter = 'all';
+let wrongOnly = false;
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  restart();
+}
+
+function buildOrder() {
+  let src = ALL_Q.map((q,i) => i);
+  if (activeFilter !== 'all') src = src.filter(i => ALL_Q[i].t == activeFilter);
+  if (wrongOnly) src = src.filter(i => answered_correct[i] === false);
+  order = shuffle(src);
+}
+
+function start() {
+  score = 0; cur = 0;
+  answered = new Array(ALL_Q.length).fill(null);
+  answered_correct = new Array(ALL_Q.length).fill(null);
+  buildOrder();
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('quizArea').style.display = '';
+  showQ();
+}
+
+function restart() {
+  wrongOnly = false;
+  start();
+}
+
+function restartWrong() {
+  wrongOnly = true;
+  buildOrder();
+  if (order.length === 0) { alert('No wrong answers to retry!'); return; }
+  cur = 0;
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('quizArea').style.display = '';
+  showQ();
+}
+
+function topicClass(t) { return t===2?'t2':t===3?'t3':''; }
+function topicLabel(t) { return ['','Topic 1: Intro to HCI','Topic 2: PACT','Topic 3: Understanding Users'][t]; }
+
+function showQ() {
+  if (cur >= order.length) { showResults(); return; }
+  const qi = order[cur];
+  const q = ALL_Q[qi];
+
+  const tag = document.getElementById('topicTag');
+  tag.textContent = topicLabel(q.t);
+  tag.className = 'topic-tag ' + topicClass(q.t);
+
+  document.getElementById('qNum').textContent = `Question ${cur+1} of ${order.length}`;
+  document.getElementById('qText').textContent = q.q;
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  // shuffle answer options while tracking correct
+  const indices = shuffle([0,1,2,3]);
+  q._shuffled = indices;
+  indices.forEach((origIdx, pos) => {
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="letter">${letters[pos]}</span><span>${q.a[origIdx]}</span>`;
+    div.onclick = () => selectOpt(qi, origIdx, div);
+    opts.appendChild(div);
+  });
+
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('btnNext').classList.remove('show');
+  updateProg();
+}
+
+function selectOpt(qi, chosen, el) {
+  const q = ALL_Q[qi];
+  if (answered[qi] !== null) return;
+  answered[qi] = chosen;
+
+  const allOpts = document.getElementById('opts').querySelectorAll('.opt');
+  allOpts.forEach((opt, pos) => {
+    const origIdx = q._shuffled[pos];
+    opt.classList.add('disabled');
+    if (origIdx === q.c) opt.classList.add('correct');
+    else if (origIdx === chosen) opt.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('feedback');
+  if (chosen === q.c) {
+    score++;
+    answered_correct[qi] = true;
+    fb.textContent = '✓ Correct!';
+    fb.className = 'feedback show ok';
+  } else {
+    answered_correct[qi] = false;
+    const letters = ['A','B','C','D'];
+    const correctPos = q._shuffled.indexOf(q.c);
+    fb.textContent = `✗ Incorrect. The correct answer is ${letters[correctPos]}: ${q.a[q.c]}`;
+    fb.className = 'feedback show bad';
+  }
+
+  document.getElementById('btnNext').classList.add('show');
+  document.getElementById('btnNext').textContent = cur+1 < order.length ? 'Next question →' : 'See results →';
+  updateProg();
+}
+
+function nextQ() { cur++; showQ(); }
+
+function updateProg() {
+  const done = order.slice(0, cur + (answered[order[cur]]!==null?1:0)).filter(i => answered[i]!==null).length;
+  const pct = order.length ? (done/order.length*100) : 0;
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progTxt').textContent = `${done} / ${order.length}`;
+  document.getElementById('scoreBadge').textContent = `Score: ${score}`;
+}
+
+function showResults() {
+  document.getElementById('quizArea').style.display = 'none';
+  const r = document.getElementById('results');
+  r.classList.add('show');
+
+  const total = order.length;
+  const pct = Math.round(score/total*100);
+  document.getElementById('rScore').textContent = `${score}/${total}`;
+  document.getElementById('rCorrect').textContent = score;
+  document.getElementById('rWrong').textContent = total - score;
+  document.getElementById('rPct').textContent = pct+'%';
+
+  const grades = ['','Keep studying!','Getting there!','Good work!','Great job!','Excellent!'];
+  const gi = pct<50?1:pct<65?2:pct<75?3:pct<90?4:5;
+  document.getElementById('rLabel').textContent = grades[gi] + ` — ${pct}% accuracy`;
+
+  const rl = document.getElementById('reviewList');
+  rl.innerHTML = '<h3>Review</h3>';
+  order.forEach((qi, pos) => {
+    const q = ALL_Q[qi];
+    const ok = answered_correct[qi];
+    const div = document.createElement('div');
+    div.className = 'rev-item';
+    div.innerHTML = `<span class="ri">${pos+1}.</span><span class="rs ${ok?'ok':'bad'}">${ok?'✓':'✗'}</span><span class="rev-q">${q.q}</span>`;
+    rl.appendChild(div);
+  });
+
+  document.getElementById('progFill').style.width = '100%';
+  document.getElementById('progTxt').textContent = `${total} / ${total}`;
+  document.getElementById('scoreBadge').textContent = `Score: ${score}`;
+}
+
+start();
+</script>
+</body>
+</html>
